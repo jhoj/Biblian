@@ -1,0 +1,21 @@
+{
+  "name": "biblian",
+  "version": "1.0.0",
+  "description": "Faroese Bible verse display application for churches and presentations",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:22782/git/jhoj/Biblian"
+  },
+  "keywords": ["bible", "faroese", "presentation", "church"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^33.0.0",
+    "fuse.js": "^7.0.0"
+  }
+}

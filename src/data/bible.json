@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "translation": "Bíblian - Victor Danielsen 1949 (updated 1974)",
+    "language": "Faroese",
+    "note": "Replace this sample data with the full Victor Danielsen translation. Each book should have chapters, and each chapter should have numbered verses."
+  },
+  "books": [
+    {
+      "name": "1. Mósebók",
+      "abbrev": "1Mos",
+      "chapters": [
+        {
+          "chapter": 1,
+          "verses": [
+            { "verse": 1, "text": "Í upphavirðum skapaði Guð himin og jørð." },
+            { "verse": 2, "text": "Og jørðin var auðn og tóm, og myrkur var á djúpinum; og andi Guðs sveiv yvir vøtnunum." },
+            { "verse": 3, "text": "Og Guð segði: Verði ljós! Og ljós varð." },
+            { "verse": 4, "text": "Og Guð sá, at ljósið var gott; og Guð skildi ljósið frá myrkrinum." },
+            { "verse": 5, "text": "Og Guð kallaði ljósið dag, og myrkrið kallaði hann nátt. Og varð kvøld, og varð morgun, fyrsti dagur." }
+          ]
+        },
+        {
+          "chapter": 2,
+          "verses": [
+            { "verse": 1, "text": "Soleiðis vóru fullgjørd himin og jørð og allur herur teirra." },
+            { "verse": 2, "text": "Og Guð hevði á sjöunda degi fullgjørt verk sítt, ið hann hevði gjørt; og hann hvíldi á sjöunda degi frá øllum verki sínum, ið hann hevði gjørt." },
+            { "verse": 3, "text": "Og Guð signaði sjöunda dagin og helgaði hann; tí at á honum hvíldi hann frá øllum verki sínum, ið Guð hevði skapað og gjørt." }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sálmarnir",
+      "abbrev": "Sálm",
+      "chapters": [
+        {
+          "chapter": 23,
+          "verses": [
+            { "verse": 1, "text": "Harrin er hirðari mín, mær skal einki fata." },
+            { "verse": 2, "text": "Hann leggur meg á grønar engjar, hann leiðir meg at friðsælum vøtnum." },
+            { "verse": 3, "text": "Hann endurreisir sál mína; hann leiðir meg á vegum rættlætis fyri síns navns skuld." },
+            { "verse": 4, "text": "Um eg enn gongdi í deyðadals myrkri, eg óttadist einki illt; tí tú ert við mær; títt ris og títt stav, tey hugfrøsta meg." },
+            { "verse": 5, "text": "Tú reið borð fyri mær frammanfyri mínar óvinir; tú smurdi mítt høvd við olju; mín bikari rennur yvir." },
+            { "verse": 6, "text": "Jú, gódleiki og miskunn skulu fylgja mær alla mínar lívsdagar, og eg skal búgva í húsi Harrans um langa tíð." }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Evangeliið eftir Matteus",
+      "abbrev": "Matt",
+      "chapters": [
+        {
+          "chapter": 5,
+          "verses": [
+            { "verse": 1, "text": "Men tá hann sá fólkamúgvurnar, gekk hann upp á fjallið; og tá hann hevði sett seg, komu lærusveinar hansara til hansara." },
+            { "verse": 2, "text": "Og hann lat upp munn sín, lærdi teir og segði:" },
+            { "verse": 3, "text": "Sælir eru tey fátæku í andanum; tí teirra er himmalríkið." },
+            { "verse": 4, "text": "Sælir eru tey, ið syrgja; tí tey skulu hugfróast." },
+            { "verse": 5, "text": "Sælir eru tey mildlyntu; tí tey skulu erva jørðina." },
+            { "verse": 6, "text": "Sælir eru tey, ið hungra og torsta eftir rættlæti; tí tey skulu mettast." },
+            { "verse": 7, "text": "Sælir eru tey miskunnsømu; tí teimum skal vísast miskunn." },
+            { "verse": 8, "text": "Sælir eru tey reinhjørtuðu; tí tey skulu síggja Guð." },
+            { "verse": 9, "text": "Sælir eru friðargjørdararnir; tí tey skulu kallast synir Guðs." }
+          ]
+        },
+        {
+          "chapter": 6,
+          "verses": [
+            { "verse": 9, "text": "Soleiðis skulu tit biðja: Faðir vár, tú sum ert á himli, heilagt verði títt navn." },
+            { "verse": 10, "text": "Títt ríki komi. Títt vilja verði, sum á himli, so á jørð." },
+            { "verse": 11, "text": "Gev okkum í dag okkara dagliga breyð." },
+            { "verse": 12, "text": "Og fyrigev okkum skuldir okkara, sum vit eisini fyrigeva okkara skuldneyðum." },
+            { "verse": 13, "text": "Og leið okkum ikki í freistni, men frels okkum frá tí illa. Tí at títt er ríkið og mátturin og heiðurin í ævir. Amen." }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Evangeliið eftir Jóhannes",
+      "abbrev": "Jóh",
+      "chapters": [
+        {
+          "chapter": 3,
+          "verses": [
+            { "verse": 16, "text": "Tí so elskaði Guð heiminn, at hann gav son sín, tann einborna, fyri at hvør, ið trúir á hann, skal ikki glatast, men hava eilívt lív." },
+            { "verse": 17, "text": "Tí Guð sendi ikki son sín til heimin, fyri at hann skuldi døma heiminn, men fyri at heimurin skuldi frelsast við hann." }
+          ]
+        },
+        {
+          "chapter": 1,
+          "verses": [
+            { "verse": 1, "text": "Í upphavirðum var Orðið, og Orðið var hjá Guði, og Orðið var Guð." },
+            { "verse": 2, "text": "Hetta var í upphavirðum hjá Guði." },
+            { "verse": 3, "text": "Alt er gjørt við tað, og uttan tað er einki gjørt, ið gjørt er." },
+            { "verse": 4, "text": "Í tí var lív, og lívið var ljós mannanna." },
+            { "verse": 5, "text": "Og ljósið skín í myrkrinum, og myrkrið fataði tað ikki." }
+          ]
+        }
+      ]
+    }
+  ]
+}

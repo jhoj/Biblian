@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fo">
+<head>
+  <meta charset="UTF-8">
+  <title>Biblían - Stýring</title>
+  <link rel="stylesheet" href="control.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>Biblían</h1>
+      <div class="header-controls">
+        <select id="screen-select" title="Vel skígga">
+          <option value="">Skíggjar...</option>
+        </select>
+        <button id="btn-fullscreen" title="Fullur skíggur (F11)">⛶</button>
+        <button id="btn-clear" title="Reinsa skígga">Reinsa</button>
+      </div>
+    </header>
+
+    <div class="search-bar">
+      <input
+        type="text"
+        id="search-input"
+        placeholder="Leita... (t.d. 'sælir eru' ella 'Jóh 3:16' ella 'hirðari')"
+        autofocus
+      >
+      <div class="search-hint">Fuzzy leiting — skriv okkurt, so finnur Biblían tað</div>
+    </div>
+
+    <div class="main-content">
+      <div class="sidebar">
+        <h3>Bøkur</h3>
+        <ul id="book-list" class="book-list"></ul>
+      </div>
+
+      <div class="content-area">
+        <div id="chapter-nav" class="chapter-nav" style="display:none;">
+          <h3 id="current-book-title"></h3>
+          <div id="chapter-buttons" class="chapter-buttons"></div>
+        </div>
+
+        <div id="search-results" class="search-results" style="display:none;">
+          <h3>Úrslit</h3>
+          <ul id="results-list"></ul>
+        </div>
+
+        <div id="verse-panel" class="verse-panel" style="display:none;">
+          <h3 id="verse-panel-title"></h3>
+          <div id="verse-list" class="verse-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-bar">
+      <h4>Forsýning:</h4>
+      <div id="preview" class="preview-text">Einki valt</div>
+    </div>
+
+    <div class="style-controls">
+      <label>
+        Støddi:
+        <input type="range" id="font-size" min="24" max="120" value="56">
+        <span id="font-size-val">56px</span>
+      </label>
+      <label>
+        Bakgrunnur:
+        <input type="color" id="bg-color" value="#000000">
+      </label>
+      <label>
+        Litur:
+        <input type="color" id="text-color" value="#ffffff">
+      </label>
+    </div>
+  </div>
+
+  <script src="control.js"></script>
+</body>
+</html>
