@@ -63,6 +63,8 @@ contextBridge.exposeInMainWorld('biblian', {
   getScreens: () => ipcRenderer.invoke('get-screens'),
   moveDisplay: (displayId) => ipcRenderer.send('move-display', displayId),
   getDisplaySize: () => ipcRenderer.invoke('get-display-size'),
+  getSettings: () => ipcRenderer.invoke('get-settings'),
+  saveSettings: (settings) => ipcRenderer.send('save-settings', settings),
 
   // IPC from main process (for display window)
   onShowVerse: (callback) =>

@@ -1,5 +1,31 @@
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('path');
+const fs = require('fs');
+
+// --- Settings persistence ---
+
+const defaultSettings = {
+  fontSize: 56,
+  backgroundColor: '#000000',
+  color: '#ffffff',
+};
+
+function getSettingsPath() {
+  return path.join(app.getPath('userData'), 'settings.json');
+}
+
+function loadSettings() {
+  try {
+    const data = fs.readFileSync(getSettingsPath(), 'utf-8');
+    return { ...defaultSettings, ...JSON.parse(data) };
+  } catch {
+    return { ...defaultSettings };
+  }
+}
+
+function saveSettings(settings) {
+  fs.writeFileSync(getSettingsPath(), JSON.stringify(settings, null, 2));
+}
 
 let controlWindow = null;
 let displayWindow = null;
@@ -134,6 +160,16 @@ function setupDisplayResizeForward() {
     }
   });
 }
+
+// IPC: Get saved settings
+ipcMain.handle('get-settings', () => {
+  return loadSettings();
+});
+
+// IPC: Save settings
+ipcMain.on('save-settings', (_event, settings) => {
+  saveSettings(settings);
+});
 
 // IPC: Move display to chosen screen
 ipcMain.on('move-display', (_event, displayId) => {
