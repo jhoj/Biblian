@@ -20,9 +20,181 @@ const textColorPicker = document.getElementById('text-color');
 const screenSelect = document.getElementById('screen-select');
 const btnFullscreen = document.getElementById('btn-fullscreen');
 const btnClear = document.getElementById('btn-clear');
+const capacityVal = document.getElementById('capacity-val');
+const charcountVal = document.getElementById('charcount-val');
 
 let selectedBookIndex = -1;
 let selectedChapter = -1;
+
+// --- Capacity calculation (mirrors display.js logic) ---
+
+const _canvas = document.createElement('canvas');
+const _ctx = _canvas.getContext('2d');
+const _sampleText = 'Tí so elskaði Guð heiminn, at hann gav son sín, tann einborna, fyri at hvør ið trýr á hann, ikki skal týnast, men hava eyvigt lív.';
+
+function getCharWidthRatio() {
+  const refSize = 48;
+  _ctx.font = `400 ${refSize}px sans-serif`;
+  const measured = _ctx.measureText(_sampleText);
+  return measured.width / _sampleText.length / refSize;
+}
+
+const charWidthRatio = getCharWidthRatio();
+let displaySize = null;
+let maxFontSize = 56;
+
+function calcCapacity(fontSize, dispSize) {
+  if (!dispSize) return 0;
+  const availableWidth = (dispSize.width - 160) * 0.9;
+  const availableHeight = dispSize.height - 120;
+  const charsPerLine = Math.floor(availableWidth / (fontSize * charWidthRatio));
+  const lineHeight = fontSize * 1.4;
+  const maxLines = Math.floor(availableHeight / lineHeight);
+  return charsPerLine * maxLines;
+}
+
+function calcFittingFontSize(textLength, dispSize) {
+  if (!dispSize || textLength === 0) return maxFontSize;
+  if (calcCapacity(maxFontSize, dispSize) >= textLength) return maxFontSize;
+  let lo = 16;
+  let hi = maxFontSize;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (calcCapacity(mid, dispSize) >= textLength) {
+      lo = mid;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return lo;
+}
+
+function updateCapacityDisplay() {
+  if (!displaySize) {
+    capacityVal.textContent = '—';
+    charcountVal.textContent = '0';
+    return;
+  }
+
+  const capacity = calcCapacity(maxFontSize, displaySize);
+  capacityVal.textContent = capacity;
+
+  // Calculate character count from current selection
+  const text = getSelectedText();
+  const charCount = text.length;
+  charcountVal.textContent = charCount;
+
+  // Highlight if over capacity
+  if (charCount > capacity) {
+    charcountVal.classList.add('over-capacity');
+  } else {
+    charcountVal.classList.remove('over-capacity');
+  }
+}
+
+async function initDisplaySize() {
+  displaySize = await biblian.getDisplaySize();
+  updateCapacityDisplay();
+}
+
+biblian.onDisplayResize((size) => {
+  displaySize = size;
+  updateCapacityDisplay();
+});
+
+// --- Keyboard navigation state ---
+
+// Each navigable list (search results, verse list) tracks its own data.
+// `activeList` points to whichever is currently visible.
+let focusedIndex = -1;
+let activeListItems = []; // array of { el, data } where data has verse info
+let multiSelected = new Set(); // indices into activeListItems
+
+function getActiveListContainer() {
+  if (searchResults.style.display !== 'none') return resultsList;
+  if (versePanel.style.display !== 'none') return verseList;
+  return null;
+}
+
+function clearFocus() {
+  activeListItems.forEach((item) => item.el.classList.remove('focused'));
+  focusedIndex = -1;
+}
+
+function setFocus(index) {
+  if (index < 0 || index >= activeListItems.length) return;
+  clearFocus();
+  focusedIndex = index;
+  activeListItems[index].el.classList.add('focused');
+  activeListItems[index].el.scrollIntoView({ block: 'nearest' });
+}
+
+function clearMultiSelect() {
+  multiSelected.clear();
+  activeListItems.forEach((item) => item.el.classList.remove('multi-selected'));
+  updateCapacityDisplay();
+}
+
+function toggleMultiSelect(index) {
+  if (index < 0 || index >= activeListItems.length) return;
+  if (multiSelected.has(index)) {
+    multiSelected.delete(index);
+    activeListItems[index].el.classList.remove('multi-selected');
+  } else {
+    multiSelected.add(index);
+    activeListItems[index].el.classList.add('multi-selected');
+  }
+  updateCapacityDisplay();
+}
+
+function getSelectedText() {
+  if (multiSelected.size > 0) {
+    const indices = Array.from(multiSelected).sort((a, b) => a - b);
+    return indices.map((i) => activeListItems[i].data.text).join(' ');
+  }
+  if (focusedIndex >= 0 && focusedIndex < activeListItems.length) {
+    return activeListItems[focusedIndex].data.text;
+  }
+  return '';
+}
+
+function getSelectedReference() {
+  if (multiSelected.size > 0) {
+    const indices = Array.from(multiSelected).sort((a, b) => a - b);
+    const first = activeListItems[indices[0]].data;
+    const last = activeListItems[indices[indices.length - 1]].data;
+    if (first.abbrev === last.abbrev && first.chapter === last.chapter) {
+      return first.abbrev + ' ' + first.chapter + ':' + first.verse + '-' + last.verse;
+    }
+    return indices.map((i) => {
+      const d = activeListItems[i].data;
+      return d.abbrev + ' ' + d.chapter + ':' + d.verse;
+    }).join('; ');
+  }
+  if (focusedIndex >= 0 && focusedIndex < activeListItems.length) {
+    const d = activeListItems[focusedIndex].data;
+    return d.abbrev + ' ' + d.chapter + ':' + d.verse;
+  }
+  return '';
+}
+
+function displayCurrentSelection() {
+  const text = getSelectedText();
+  const ref = getSelectedReference();
+  if (!text) return;
+
+  preview.textContent = ref + ' — ' + text;
+  biblian.displayVerse({ reference: ref, text: text });
+  updateCapacityDisplay();
+
+  // Mark the displayed items as 'selected' visually
+  activeListItems.forEach((item) => item.el.classList.remove('selected'));
+  if (multiSelected.size > 0) {
+    multiSelected.forEach((i) => activeListItems[i].el.classList.add('selected'));
+  } else if (focusedIndex >= 0) {
+    activeListItems[focusedIndex].el.classList.add('selected');
+  }
+}
 
 // --- Book list ---
 
@@ -73,28 +245,42 @@ function selectChapter(bookIndex, chapterNum) {
   versePanel.style.display = 'block';
   versePanelTitle.textContent = book.name + ' ' + chapterNum;
   verseList.innerHTML = '';
+  activeListItems = [];
+  focusedIndex = -1;
+  multiSelected.clear();
 
   chapter.verses.forEach((v) => {
     const div = document.createElement('div');
     div.className = 'verse-item';
     div.innerHTML =
       '<span class="verse-num">' + v.verse + '</span>' +
-      '<span class="verse-text">' + escapeHtml(v.text) + '</span>';
-    div.addEventListener('click', () => {
-      sendVerse(book.name, chapterNum, v.verse, v.text);
-      verseList.querySelectorAll('.verse-item').forEach((el) =>
-        el.classList.remove('selected')
-      );
-      div.classList.add('selected');
+      '<span class="verse-text-content">' + escapeHtml(v.text) + '</span>';
+
+    const data = {
+      book: book.name,
+      abbrev: book.abbrev,
+      chapter: chapterNum,
+      verse: v.verse,
+      text: v.text,
+    };
+
+    const itemIndex = activeListItems.length;
+    div.addEventListener('click', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        setFocus(itemIndex);
+        toggleMultiSelect(itemIndex);
+      } else {
+        clearMultiSelect();
+        setFocus(itemIndex);
+        displayCurrentSelection();
+      }
     });
+
+    activeListItems.push({ el: div, data: data });
     verseList.appendChild(div);
   });
-}
 
-function sendVerse(bookName, chapter, verse, text) {
-  const ref = bookName + ' ' + chapter + ':' + verse;
-  preview.textContent = ref + ' — ' + text;
-  biblian.displayVerse({ reference: ref, text: text });
+  updateCapacityDisplay();
 }
 
 // --- Search ---
@@ -138,6 +324,7 @@ function performSearch(query) {
               {
                 item: {
                   book: book.name,
+                  abbrev: book.abbrev,
                   chapter: chapNum,
                   verse: verseNum,
                   text: verse.text,
@@ -151,6 +338,7 @@ function performSearch(query) {
           const results = chapter.verses.map((v) => ({
             item: {
               book: book.name,
+              abbrev: book.abbrev,
               chapter: chapNum,
               verse: v.verse,
               text: v.text,
@@ -173,6 +361,9 @@ function showSearchResults(results) {
   hideAllPanels();
   searchResults.style.display = 'block';
   resultsList.innerHTML = '';
+  activeListItems = [];
+  focusedIndex = -1;
+  multiSelected.clear();
 
   if (results.length === 0) {
     const li = document.createElement('li');
@@ -189,15 +380,36 @@ function showSearchResults(results) {
     li.innerHTML =
       '<div class="result-ref">' + escapeHtml(item.ref) + '</div>' +
       '<div class="result-text">' + escapeHtml(item.text) + '</div>';
-    li.addEventListener('click', () => {
-      sendVerse(item.book, item.chapter, item.verse, item.text);
-      resultsList.querySelectorAll('li').forEach((el) =>
-        el.classList.remove('selected')
-      );
-      li.classList.add('selected');
+
+    const data = {
+      book: item.book,
+      abbrev: item.abbrev,
+      chapter: item.chapter,
+      verse: item.verse,
+      text: item.text,
+    };
+
+    const itemIndex = activeListItems.length;
+    li.addEventListener('click', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        setFocus(itemIndex);
+        toggleMultiSelect(itemIndex);
+      } else {
+        clearMultiSelect();
+        setFocus(itemIndex);
+        displayCurrentSelection();
+      }
     });
+
+    activeListItems.push({ el: li, data: data });
     resultsList.appendChild(li);
   });
+
+  // Auto-focus first result
+  if (activeListItems.length > 0) {
+    setFocus(0);
+    updateCapacityDisplay();
+  }
 }
 
 function hideAllPanels() {
@@ -209,8 +421,10 @@ function hideAllPanels() {
 // --- Style controls ---
 
 fontSizeSlider.addEventListener('input', () => {
+  maxFontSize = parseInt(fontSizeSlider.value);
   fontSizeVal.textContent = fontSizeSlider.value + 'px';
   biblian.updateStyle({ fontSize: fontSizeSlider.value + 'px' });
+  updateCapacityDisplay();
 });
 
 bgColorPicker.addEventListener('input', () => {
@@ -246,17 +460,15 @@ btnFullscreen.addEventListener('click', () => biblian.toggleFullscreen());
 btnClear.addEventListener('click', () => {
   biblian.clearDisplay();
   preview.textContent = 'Einki valt';
-  verseList.querySelectorAll('.verse-item').forEach((el) =>
-    el.classList.remove('selected')
-  );
-  resultsList.querySelectorAll('li').forEach((el) =>
-    el.classList.remove('selected')
-  );
+  clearMultiSelect();
+  activeListItems.forEach((item) => item.el.classList.remove('selected'));
+  updateCapacityDisplay();
 });
 
 // --- Keyboard shortcuts ---
 
 document.addEventListener('keydown', (e) => {
+  // Focus search
   if (
     (e.ctrlKey && e.key === 'f') ||
     (e.key === '/' && document.activeElement !== searchInput)
@@ -264,15 +476,72 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     searchInput.focus();
     searchInput.select();
+    return;
   }
+
+  // Escape: clear search
   if (e.key === 'Escape') {
     searchInput.value = '';
     searchInput.dispatchEvent(new Event('input'));
     searchInput.blur();
+    clearMultiSelect();
+    return;
   }
+
+  // Fullscreen
   if (e.key === 'F11') {
     e.preventDefault();
     biblian.toggleFullscreen();
+    return;
+  }
+
+  // Arrow key navigation in active list
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    if (activeListItems.length === 0) return;
+    e.preventDefault();
+
+    let newIndex;
+    if (e.key === 'ArrowDown') {
+      newIndex = focusedIndex < activeListItems.length - 1 ? focusedIndex + 1 : 0;
+    } else {
+      newIndex = focusedIndex > 0 ? focusedIndex - 1 : activeListItems.length - 1;
+    }
+
+    if (e.ctrlKey || e.metaKey) {
+      // Ctrl+Arrow: move focus and toggle multi-select on new item
+      setFocus(newIndex);
+      toggleMultiSelect(newIndex);
+    } else if (e.shiftKey) {
+      // Shift+Arrow: extend selection
+      setFocus(newIndex);
+      if (!multiSelected.has(newIndex)) {
+        toggleMultiSelect(newIndex);
+      }
+    } else {
+      setFocus(newIndex);
+      if (multiSelected.size === 0) {
+        updateCapacityDisplay();
+      }
+    }
+    return;
+  }
+
+  // Enter: display current selection
+  if (e.key === 'Enter') {
+    if (activeListItems.length === 0) return;
+    e.preventDefault();
+
+    if (e.ctrlKey || e.metaKey) {
+      // Ctrl+Enter: toggle multi-select on focused item
+      if (focusedIndex >= 0) {
+        toggleMultiSelect(focusedIndex);
+      }
+    } else {
+      // Enter: display focused item or all multi-selected
+      if (focusedIndex < 0 && multiSelected.size === 0) return;
+      displayCurrentSelection();
+    }
+    return;
   }
 });
 
@@ -288,3 +557,4 @@ function escapeHtml(text) {
 
 renderBookList();
 loadScreens();
+initDisplaySize();

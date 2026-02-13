@@ -3,7 +3,10 @@ const path = require('path');
 const Fuse = require('fuse.js');
 
 // Load Bible data in the preload (has Node access)
-const bibleData = require(path.join(__dirname, '..', 'data', 'bible.json'));
+const fs = require('fs');
+const bibleData = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '..', 'data', 'bible.json'), 'utf-8')
+);
 
 // Build flat verse index for searching
 const allVerses = [];
@@ -59,6 +62,7 @@ contextBridge.exposeInMainWorld('biblian', {
   toggleFullscreen: () => ipcRenderer.send('toggle-fullscreen'),
   getScreens: () => ipcRenderer.invoke('get-screens'),
   moveDisplay: (displayId) => ipcRenderer.send('move-display', displayId),
+  getDisplaySize: () => ipcRenderer.invoke('get-display-size'),
 
   // IPC from main process (for display window)
   onShowVerse: (callback) =>
@@ -66,4 +70,6 @@ contextBridge.exposeInMainWorld('biblian', {
   onClear: (callback) => ipcRenderer.on('clear', () => callback()),
   onUpdateStyle: (callback) =>
     ipcRenderer.on('update-style', (_event, style) => callback(style)),
+  onDisplayResize: (callback) =>
+    ipcRenderer.on('display-resized', (_event, size) => callback(size)),
 });

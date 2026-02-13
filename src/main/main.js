@@ -13,6 +13,7 @@ function createControlWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: false,
     },
   });
 
@@ -47,6 +48,7 @@ function createDisplayWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: false,
     },
   });
 
@@ -70,6 +72,7 @@ function createDisplayWindow() {
 app.whenReady().then(() => {
   createControlWindow();
   createDisplayWindow();
+  setupDisplayResizeForward();
 });
 
 app.on('window-all-closed', () => {
@@ -113,6 +116,24 @@ ipcMain.handle('get-screens', () => {
     isPrimary: d.bounds.x === 0 && d.bounds.y === 0,
   }));
 });
+
+// IPC: Get display window content size
+ipcMain.handle('get-display-size', () => {
+  if (!displayWindow) return null;
+  const [width, height] = displayWindow.getContentSize();
+  return { width, height };
+});
+
+// Forward display window resize to control window
+function setupDisplayResizeForward() {
+  if (!displayWindow) return;
+  displayWindow.on('resize', () => {
+    if (controlWindow) {
+      const [width, height] = displayWindow.getContentSize();
+      controlWindow.webContents.send('display-resized', { width, height });
+    }
+  });
+}
 
 // IPC: Move display to chosen screen
 ipcMain.on('move-display', (_event, displayId) => {
