@@ -10,20 +10,34 @@
     <!-- Slim header -->
     <header class="header">
       <div class="header-left">
-        <button id="btn-search" class="icon-btn" title="Leita (Ctrl+S)">&#x1F50D;</button>
+        <button id="btn-search" class="icon-btn" title="Leita (L)">&#x1F50D;</button>
+        <select id="screen-select" title="Vel skígga">
+          <option value="">Skíggjar...</option>
+        </select>
+        <button id="btn-fullscreen" class="header-btn" title="Fullur skíggur (F11)">&#x26F6;</button>
+        <label class="header-toggle" title="Fjal tekstin (F)">
+          <input type="checkbox" id="chk-hide-text">
+          <span class="toggle-slider"></span>
+          <span class="toggle-label" data-shortcut="f">Fjal tekstin</span>
+        </label>
+        <label class="header-toggle" title="Beinleiðis (B)">
+          <input type="checkbox" id="chk-direct">
+          <span class="toggle-slider"></span>
+          <span class="toggle-label" data-shortcut="b">Beinleiðis</span>
+        </label>
       </div>
       <div class="header-center">
-        <label>
+        <label data-shortcut="s">
           Støddi:
           <input type="range" id="font-size" min="24" max="120" value="56">
           <span id="font-size-val">56px</span>
         </label>
-        <label>
-          Bakgr:
+        <label data-shortcut="m">
+          Mynd litur:
           <input type="color" id="bg-color" value="#000000">
         </label>
-        <label>
-          Litur:
+        <label data-shortcut="t">
+          Tekst litur:
           <input type="color" id="text-color" value="#ffffff">
         </label>
       </div>
@@ -33,14 +47,16 @@
     <div class="main-content">
       <!-- Left: navigation column (drill-down) -->
       <div class="nav-column" id="nav-column"></div>
+      <div class="resize-handle" id="resize-left"></div>
 
       <!-- Center: reading pane -->
       <div class="reading-pane" id="reading-pane">
         <div class="reading-placeholder">Vel eina bók og kapittul</div>
       </div>
+      <div class="resize-handle" id="resize-right"></div>
 
       <!-- Right: preview column -->
-      <div class="preview-column">
+      <div class="preview-column" id="preview-column">
         <div class="mini-preview" id="mini-preview">
           <div class="mini-preview-display" id="mini-preview-display">
             <div class="mini-ref" id="mini-ref"></div>
@@ -54,28 +70,35 @@
       </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="footer">
-      <select id="screen-select" title="Vel skígga">
-        <option value="">Skíggjar...</option>
-      </select>
-      <button id="btn-fullscreen" class="footer-btn" title="Fullur skíggur (F11)">&#x26F6;</button>
-      <button id="btn-clear" class="footer-btn btn-clear" title="Reinsa skígga">Reinsa</button>
-    </footer>
-
     <!-- Search overlay -->
     <div class="search-overlay" id="search-overlay" style="display:none;">
       <div class="search-backdrop" id="search-backdrop"></div>
       <div class="search-dialog">
+        <div class="search-tabs">
+          <button class="search-tab active" data-mode="verse">Vers</button>
+          <button class="search-tab" data-mode="book">Bók</button>
+        </div>
         <input
           type="text"
           id="search-input"
-          placeholder="Leita... (t.d. 'sælir eru' ella 'Jóh 3:16')"
+          placeholder="Leita í versum... (t.d. 'sælir eru' ella 'Jóh 3:16')"
           autocomplete="off"
         >
         <ul id="search-results" class="search-results-list"></ul>
       </div>
     </div>
+  </div>
+
+  <!-- Shortcut hints (shown while Alt is held) -->
+  <div class="shortcut-hints" id="shortcut-hints" style="display:none;"></div>
+
+  <!-- Search hints (shown while Alt is held in search) -->
+  <div class="search-hints" id="search-hints" style="display:none;">
+    <div class="search-hint-row"><kbd>&larr;</kbd><kbd>&rarr;</kbd> Skift millum Vers / Bók</div>
+    <div class="search-hint-row"><kbd>&uarr;</kbd><kbd>&darr;</kbd> Vel úrslit</div>
+    <div class="search-hint-row"><kbd>Enter</kbd> Far til valda vers / bók</div>
+    <div class="search-hint-row"><kbd>0-9</kbd> Vel kapittul (Bók-leiting)</div>
+    <div class="search-hint-row"><kbd>Esc</kbd> Lat aftur</div>
   </div>
 
   <script src="control.js"></script>

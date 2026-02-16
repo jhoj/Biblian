@@ -1,58 +1,23 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const path = require('path');
-const Fuse = require('fuse.js');
 
 // Load Bible data in the preload (has Node access)
 const fs = require('fs');
-const bibleData = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '..', 'data', 'bible.json'), 'utf-8')
+const bibleJsonStr = fs.readFileSync(
+  path.join(__dirname, '..', 'data', 'bible.json'),
+  'utf-8'
 );
+const bibleData = JSON.parse(bibleJsonStr);
 
-// Build flat verse index for searching
-const allVerses = [];
-for (const book of bibleData.books) {
-  for (const chapter of book.chapters) {
-    for (const v of chapter.verses) {
-      allVerses.push({
-        book: book.name,
-        abbrev: book.abbrev,
-        chapter: chapter.chapter,
-        verse: v.verse,
-        text: v.text,
-        ref: `${book.name} ${chapter.chapter}:${v.verse}`,
-        shortRef: `${book.abbrev} ${chapter.chapter}:${v.verse}`,
-      });
-    }
-  }
-}
-
-// Initialize Fuse.js
-const fuse = new Fuse(allVerses, {
-  keys: [
-    { name: 'text', weight: 0.6 },
-    { name: 'ref', weight: 0.3 },
-    { name: 'shortRef', weight: 0.1 },
-  ],
-  threshold: 0.4,
-  includeMatches: true,
-  ignoreLocation: true,
-  minMatchCharLength: 2,
-});
+// Initialize WASM search engine
+const wasmSearch = require('../search-pkg/biblian_search.js');
+wasmSearch.init(bibleJsonStr);
 
 contextBridge.exposeInMainWorld('biblian', {
   // Bible data
   getBibleData: () => JSON.parse(JSON.stringify(bibleData)),
   search: (query, limit) => {
-    const results = fuse.search(query, { limit: limit || 50 });
-    return JSON.parse(JSON.stringify(results));
-  },
-  findBook: (bookQuery) => {
-    const book = bibleData.books.find(
-      (b) =>
-        b.abbrev.toLowerCase() === bookQuery.toLowerCase() ||
-        b.name.toLowerCase().startsWith(bookQuery.toLowerCase())
-    );
-    return book ? JSON.parse(JSON.stringify(book)) : null;
+    return wasmSearch.search(query, limit || 50);
   },
 
   // IPC to main process
@@ -62,6 +27,7 @@ contextBridge.exposeInMainWorld('biblian', {
   toggleFullscreen: () => ipcRenderer.send('toggle-fullscreen'),
   getScreens: () => ipcRenderer.invoke('get-screens'),
   moveDisplay: (displayId) => ipcRenderer.send('move-display', displayId),
+  toggleDisplayText: () => ipcRenderer.send('toggle-display-text'),
   getDisplaySize: () => ipcRenderer.invoke('get-display-size'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings) => ipcRenderer.send('save-settings', settings),
@@ -72,6 +38,8 @@ contextBridge.exposeInMainWorld('biblian', {
   onClear: (callback) => ipcRenderer.on('clear', () => callback()),
   onUpdateStyle: (callback) =>
     ipcRenderer.on('update-style', (_event, style) => callback(style)),
+  onToggleDisplayText: (callback) =>
+    ipcRenderer.on('toggle-display-text', () => callback()),
   onDisplayResize: (callback) =>
     ipcRenderer.on('display-resized', (_event, size) => callback(size)),
 });

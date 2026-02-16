@@ -56,27 +56,25 @@ function fitText() {
 }
 
 biblian.onShowVerse((data) => {
-  display.classList.remove('fade-in');
-  display.classList.add('fade-out');
-
-  setTimeout(() => {
-    referenceEl.textContent = data.reference;
+  referenceEl.textContent = data.reference;
+  if (data.verses && data.verses.length > 0) {
+    verseTextEl.innerHTML = '';
+    data.verses.forEach((v) => {
+      const sup = document.createElement('sup');
+      sup.className = 'verse-num';
+      sup.textContent = v.verse;
+      verseTextEl.appendChild(sup);
+      verseTextEl.appendChild(document.createTextNode(v.text + ' '));
+    });
+  } else {
     verseTextEl.textContent = data.text;
-    fitText();
-    display.classList.remove('fade-out');
-    display.classList.add('fade-in');
-  }, 300);
+  }
+  fitText();
 });
 
 biblian.onClear(() => {
-  display.classList.remove('fade-in');
-  display.classList.add('fade-out');
-
-  setTimeout(() => {
-    referenceEl.textContent = '';
-    verseTextEl.textContent = '';
-    display.classList.remove('fade-out');
-  }, 300);
+  referenceEl.textContent = '';
+  verseTextEl.innerHTML = '';
 });
 
 biblian.onUpdateStyle((style) => {
@@ -94,6 +92,12 @@ biblian.onUpdateStyle((style) => {
     display.style.color = style.color;
     referenceEl.style.color = style.color;
   }
+});
+
+biblian.onToggleDisplayText(() => {
+  const hidden = referenceEl.style.visibility === 'hidden';
+  referenceEl.style.visibility = hidden ? '' : 'hidden';
+  verseTextEl.style.visibility = hidden ? '' : 'hidden';
 });
 
 // Re-fit on window resize (e.g. moving to different screen)

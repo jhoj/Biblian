@@ -44,23 +44,11 @@ body {
   transition: font-size 0.3s;
 }
 
-/* Fade animation */
-.display.fade-in .reference,
-.display.fade-in .verse-text {
-  animation: fadeIn 0.5s ease-in forwards;
+.verse-text .verse-num {
+  font-size: 0.45em;
+  font-weight: bold;
+  opacity: 0.5;
+  vertical-align: super;
+  margin-right: 0.1em;
 }
 
-.display.fade-out .reference,
-.display.fade-out .verse-text {
-  animation: fadeOut 0.3s ease-out forwards;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fadeOut {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(-10px); }
-}

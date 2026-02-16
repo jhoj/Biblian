@@ -8,6 +8,9 @@ const defaultSettings = {
   fontSize: 56,
   backgroundColor: '#000000',
   color: '#ffffff',
+  displayScreenId: null,
+  navColumnWidth: 180,
+  previewColumnWidth: 250,
 };
 
 function getSettingsPath() {
@@ -35,6 +38,7 @@ function createControlWindow() {
     width: 900,
     height: 700,
     title: 'Biblían - Stýring',
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -56,18 +60,26 @@ function createControlWindow() {
 
 function createDisplayWindow() {
   const displays = screen.getAllDisplays();
+  const settings = loadSettings();
+
+  // Try saved screen first, then external, then primary
+  let targetDisplay = null;
+  if (settings.displayScreenId != null) {
+    targetDisplay = displays.find((d) => d.id === settings.displayScreenId);
+  }
   const externalDisplay = displays.find(
     (d) => d.bounds.x !== 0 || d.bounds.y !== 0
   );
-
-  const targetDisplay = externalDisplay || displays[0];
+  if (!targetDisplay) {
+    targetDisplay = externalDisplay || displays[0];
+  }
 
   displayWindow = new BrowserWindow({
     x: targetDisplay.bounds.x,
     y: targetDisplay.bounds.y,
     width: targetDisplay.bounds.width,
     height: targetDisplay.bounds.height,
-    fullscreen: !!externalDisplay,
+    fullscreen: !!(targetDisplay !== displays[0] || externalDisplay),
     frame: false,
     title: 'Biblían - Skíggi',
     webPreferences: {
@@ -82,7 +94,7 @@ function createDisplayWindow() {
     path.join(__dirname, '..', 'renderer', 'display.html')
   );
 
-  if (!externalDisplay) {
+  if (targetDisplay === displays[0] && !externalDisplay) {
     displayWindow.setPosition(
       targetDisplay.bounds.x + 50,
       targetDisplay.bounds.y + 50
@@ -179,5 +191,16 @@ ipcMain.on('move-display', (_event, displayId) => {
   if (target) {
     displayWindow.setBounds(target.bounds);
     displayWindow.setFullScreen(true);
+    // Save selected screen
+    const settings = loadSettings();
+    settings.displayScreenId = displayId;
+    saveSettings(settings);
+  }
+});
+
+// IPC: Toggle display text visibility
+ipcMain.on('toggle-display-text', () => {
+  if (displayWindow) {
+    displayWindow.webContents.send('toggle-display-text');
   }
 });
