@@ -5,3 +5,5 @@ out/
 *.log
 src/search-pkg/
 search-wasm/target/
+package-lock.json
+package.json
