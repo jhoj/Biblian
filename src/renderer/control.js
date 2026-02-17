@@ -388,7 +388,7 @@ function selectBook(index) {
   setNavFocus(navFocusIndex);
 
   // Clear reading pane
-  readingPane.innerHTML = '<div class="reading-placeholder">Vel eitt kapittul</div>';
+  readingPane.innerHTML = '<div class="reading-placeholder">Vel kapittul</div>';
   readingVerses = [];
   focusedIndex = -1;
   multiSelected.clear();
