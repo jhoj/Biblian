@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(pkill:*)",
+      "Bash(python3:*)",
+      "Bash(node -e:*)",
+      "Bash(git add:*)",
+      "Bash(export PATH=\"$HOME/.cargo/bin:$PATH\")",
+      "Bash(cargo install:*)",
+      "Bash(wasm-pack build:*)"
+    ]
+  }
+}
