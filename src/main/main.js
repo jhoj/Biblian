@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -38,9 +38,10 @@ function createControlWindow() {
     width: 900,
     height: 700,
     title: 'Biblían - Stýring',
+    icon: appIcon,
     autoHideMenuBar: true,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload-control.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
@@ -62,28 +63,37 @@ function createDisplayWindow() {
   const displays = screen.getAllDisplays();
   const settings = loadSettings();
 
-  // Try saved screen first, then external, then primary
+  // Primary is the display at origin; all others are external
+  const primaryDisplay = displays.find(
+    (d) => d.bounds.x === 0 && d.bounds.y === 0
+  ) || displays[0];
+  const externalDisplays = displays.filter((d) => d !== primaryDisplay);
+
+  // Use saved screen only if it exists AND is not the primary display
   let targetDisplay = null;
   if (settings.displayScreenId != null) {
-    targetDisplay = displays.find((d) => d.id === settings.displayScreenId);
+    const saved = displays.find((d) => d.id === settings.displayScreenId);
+    if (saved && saved !== primaryDisplay) {
+      targetDisplay = saved;
+    }
   }
-  const externalDisplay = displays.find(
-    (d) => d.bounds.x !== 0 || d.bounds.y !== 0
-  );
   if (!targetDisplay) {
-    targetDisplay = externalDisplay || displays[0];
+    targetDisplay = externalDisplays[0] || primaryDisplay;
   }
+
+  const isExternal = targetDisplay !== primaryDisplay;
 
   displayWindow = new BrowserWindow({
     x: targetDisplay.bounds.x,
     y: targetDisplay.bounds.y,
     width: targetDisplay.bounds.width,
     height: targetDisplay.bounds.height,
-    fullscreen: !!(targetDisplay !== displays[0] || externalDisplay),
     frame: false,
+    show: false,
     title: 'Biblían - Skíggi',
+    icon: appIcon,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload-display.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
@@ -94,23 +104,36 @@ function createDisplayWindow() {
     path.join(__dirname, '..', 'renderer', 'display.html')
   );
 
-  if (targetDisplay === displays[0] && !externalDisplay) {
+  if (isExternal) {
+    // frame:false + exact display bounds is visually fullscreen without OS fullscreen.
+    // setBounds is called before and after show for reliable positioning on Windows.
+    displayWindow.setBounds(targetDisplay.bounds);
+    displayWindow.show();
+    displayWindow.setBounds(targetDisplay.bounds);
+  } else {
+    // Single screen: open as a windowed preview
     displayWindow.setPosition(
       targetDisplay.bounds.x + 50,
       targetDisplay.bounds.y + 50
     );
     displayWindow.setSize(800, 600);
+    displayWindow.show();
   }
 
   displayWindow.on('closed', () => {
     displayWindow = null;
+    if (controlWindow) {
+      controlWindow.webContents.send('display-window-state', false);
+    }
   });
 }
 
+const appIcon = nativeImage.createFromPath(
+  path.join(__dirname, '..', '..', 'build', 'icons', '512x512.png')
+);
+
 app.whenReady().then(() => {
   createControlWindow();
-  createDisplayWindow();
-  setupDisplayResizeForward();
 });
 
 app.on('window-all-closed', () => {
@@ -190,8 +213,7 @@ ipcMain.on('move-display', (_event, displayId) => {
   const target = displays.find((d) => d.id === displayId);
   if (target) {
     displayWindow.setBounds(target.bounds);
-    displayWindow.setFullScreen(true);
-    // Save selected screen
+    // No setFullScreen — same reason as createDisplayWindow
     const settings = loadSettings();
     settings.displayScreenId = displayId;
     saveSettings(settings);
@@ -203,4 +225,31 @@ ipcMain.on('toggle-display-text', () => {
   if (displayWindow) {
     displayWindow.webContents.send('toggle-display-text');
   }
+});
+
+// IPC: Toggle display window visibility
+ipcMain.on('toggle-display-window', () => {
+  if (!displayWindow) {
+    // First open: create and show the window
+    createDisplayWindow();
+    setupDisplayResizeForward();
+    if (controlWindow) {
+      controlWindow.webContents.send('display-window-state', true);
+    }
+    return;
+  }
+  const visible = displayWindow.isVisible();
+  if (visible) {
+    displayWindow.hide();
+  } else {
+    displayWindow.show();
+  }
+  if (controlWindow) {
+    controlWindow.webContents.send('display-window-state', !visible);
+  }
+});
+
+// IPC: Query display window visibility
+ipcMain.handle('get-display-visible', () => {
+  return displayWindow ? displayWindow.isVisible() : false;
 });

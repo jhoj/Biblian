@@ -11,6 +11,7 @@
     <header class="header">
       <div class="header-left">
         <button id="btn-search" class="icon-btn" title="Leita (L)">&#x1F50D;</button>
+        <button id="btn-display" class="header-btn btn-display-closed" title="Opna skíggiglugga">Opna skíggja</button>
         <select id="screen-select" title="Vel skígga">
           <option value="">Skíggjar...</option>
         </select>
@@ -40,6 +41,7 @@
           Tekst litur:
           <input type="color" id="text-color" value="#ffffff">
         </label>
+        <button id="btn-about" class="about-btn" title="Um Biblíuna">i</button>
       </div>
     </header>
 
@@ -66,6 +68,23 @@
         <div class="capacity-info">
           <div>Pláss til: <strong id="capacity-val">&mdash;</strong></div>
           <div>Vísir: <strong id="charcount-val">0</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- About overlay -->
+    <div class="about-overlay" id="about-overlay" style="display:none;">
+      <div class="about-backdrop" id="about-backdrop"></div>
+      <div class="about-dialog">
+        <div class="about-header">
+          <span class="about-title">Um Biblíuna</span>
+          <button class="about-close" id="btn-about-close">&#x2715;</button>
+        </div>
+        <div class="about-body">
+          <div class="about-appname">Biblían</div>
+          <div class="about-version">Útgáva 1.0.1</div>
+          <div class="about-desc">Føroyskt biblíuforrit fyri kirkjur og fyrilestrar.</div>
+          <div class="about-author">Gjørt av Jákup Høj</div>
         </div>
       </div>
     </div>

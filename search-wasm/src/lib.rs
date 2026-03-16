@@ -39,8 +39,6 @@ struct VerseEntry {
     verse: u32,
     text: String,
     ref_str: String,
-    /// Pre-lowercased text for substring search
-    text_lower: String,
 }
 
 // --- Search result returned to JS ---
@@ -74,6 +72,8 @@ struct BookEntry {
 struct Index {
     verses: Vec<VerseEntry>,
     books: Vec<BookEntry>,
+    /// Inverted word index: lowercase word → sorted verse indices
+    word_index: std::collections::BTreeMap<String, Vec<u32>>,
 }
 
 thread_local! {
@@ -121,7 +121,6 @@ fn parse_query(query: &str) -> ParsedQuery {
     }
 }
 
-/// Simple Unicode-aware case-insensitive substring check
 /// Match book names/abbrevs with nucleo, return vec of (book_index, score)
 fn match_books(
     books: &[BookEntry],
@@ -166,8 +165,9 @@ fn match_books(
 // --- WASM exports ---
 
 #[wasm_bindgen]
-pub fn init(bible_json: &str) {
-    let data: BibleData = serde_json::from_str(bible_json).expect("Failed to parse bible.json");
+pub fn init(bible_msgpack: &[u8]) {
+    let data: BibleData =
+        rmp_serde::from_slice(bible_msgpack).expect("Failed to deserialize bible.bin");
 
     let mut verses = Vec::new();
     let mut books = Vec::new();
@@ -179,7 +179,6 @@ pub fn init(bible_json: &str) {
         for chapter in &book.chapters {
             for v in &chapter.verses {
                 let ref_str = format!("{} {}:{}", book.name, chapter.chapter, v.verse);
-                let text_lower = v.text.to_lowercase();
                 verses.push(VerseEntry {
                     book: book.name.clone(),
                     abbrev: book.abbrev.clone(),
@@ -187,7 +186,6 @@ pub fn init(bible_json: &str) {
                     verse: v.verse,
                     text: v.text.clone(),
                     ref_str,
-                    text_lower,
                 });
                 verse_count += 1;
             }
@@ -201,8 +199,28 @@ pub fn init(bible_json: &str) {
         });
     }
 
+    // Build inverted word index
+    let mut word_index: std::collections::BTreeMap<String, Vec<u32>> =
+        std::collections::BTreeMap::new();
+    for (vi, verse) in verses.iter().enumerate() {
+        let text_lower = verse.text.to_lowercase();
+        for word in text_lower
+            .split(|c: char| !c.is_alphabetic() && c != '\'')
+            .filter(|w| !w.is_empty())
+        {
+            word_index
+                .entry(word.to_string())
+                .or_default()
+                .push(vi as u32);
+        }
+    }
+
     INDEX.with(|idx| {
-        *idx.borrow_mut() = Some(Index { verses, books });
+        *idx.borrow_mut() = Some(Index {
+            verses,
+            books,
+            word_index,
+        });
     });
 }
 
@@ -262,34 +280,55 @@ pub fn search(query: &str, limit: usize) -> JsValue {
             }
         }
 
-        // Text-only mode: word-count-based scoring on verse text
+        // Text-only mode: inverted index prefix scan + intersection
         if has_text && !has_numbers {
-            let text_query = parsed.text_tokens.join(" ");
-            let query_lower = text_query.to_lowercase();
+            let query_lower = parsed.text_tokens.join(" ").to_lowercase();
             let query_words: Vec<&str> = query_lower.split_whitespace().collect();
 
-            // 1) Per-word matching on verse text
-            for (vi, verse) in index.verses.iter().enumerate() {
-                let word_matches = query_words
+            // For each query word, collect matching verse indices via prefix scan
+            let mut candidate_sets: Vec<std::collections::HashSet<u32>> = query_words
+                .iter()
+                .map(|qw| {
+                    let mut set = std::collections::HashSet::new();
+                    for (key, postings) in index.word_index.range(qw.to_string()..) {
+                        if !key.starts_with(*qw) {
+                            break;
+                        }
+                        set.extend(postings);
+                    }
+                    set
+                })
+                .collect();
+
+            // Intersect all candidate sets (smallest first for efficiency)
+            candidate_sets.sort_by_key(|s| s.len());
+            let candidates: std::collections::HashSet<u32> = candidate_sets
+                .iter()
+                .skip(1)
+                .fold(
+                    candidate_sets.first().cloned().unwrap_or_default(),
+                    |acc, s| acc.intersection(s).copied().collect(),
+                );
+
+            // Score only candidates (much smaller set than all verses)
+            for &vi in &candidates {
+                let verse = &index.verses[vi as usize];
+                let text_lower = verse.text.to_lowercase();
+                let matches = query_words
                     .iter()
-                    .filter(|w| verse.text_lower.contains(**w))
+                    .filter(|w| text_lower.contains(*w))
                     .count();
-                if word_matches == 0 {
-                    continue;
-                }
-                let full_phrase_bonus = if query_words.len() > 1
-                    && verse.text_lower.contains(&query_lower)
-                {
-                    500
+                let phrase = if query_words.len() > 1 && text_lower.contains(&query_lower) {
+                    500i64
                 } else {
                     0
                 };
-                let score = (word_matches as i64) * 1000 + full_phrase_bonus;
-                scored.push((score, vi));
+                scored.push((matches as i64 * 1000 + phrase, vi as usize));
             }
 
-            // 2) If not enough matches, use nucleo fuzzy on text (capped at 150)
-            if scored.len() < limit {
+            // Fuzzy fallback only if very few results
+            if scored.len() < 5 {
+                let text_query = parsed.text_tokens.join(" ");
                 let pattern = Pattern::new(
                     &text_query,
                     CaseMatching::Ignore,
