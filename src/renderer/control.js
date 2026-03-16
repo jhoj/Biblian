@@ -1,5 +1,5 @@
 // All data and search is exposed via the preload script (window.biblian)
-const bibleData = biblian.getBibleData();
+const bibleData = JSON.parse(biblian.getBibleDataJson());
 
 // DOM elements
 const navColumn = document.getElementById('nav-column');
@@ -16,6 +16,10 @@ const btnFullscreen = document.getElementById('btn-fullscreen');
 const chkHideText = document.getElementById('chk-hide-text');
 const chkDirect = document.getElementById('chk-direct');
 const btnSearch = document.getElementById('btn-search');
+const btnDisplay = document.getElementById('btn-display');
+const btnAbout = document.getElementById('btn-about');
+const aboutOverlay = document.getElementById('about-overlay');
+const aboutBackdrop = document.getElementById('about-backdrop');
 const shortcutHints = document.getElementById('shortcut-hints');
 const searchHintsEl = document.getElementById('search-hints');
 const capacityVal = document.getElementById('capacity-val');
@@ -33,6 +37,7 @@ let navFocusIndex = -1; // focused item in book/chapter lists
 // --- State for reading pane verses ---
 let readingVerses = []; // { el, data } for each verse span in reading pane
 let focusedIndex = -1;
+let focusedEl = null;
 let multiSelected = new Set();
 let liveIndices = new Set(); // verse indices currently shown on live display
 let directMode = false;
@@ -172,7 +177,8 @@ function getSelectedReference() {
 // --- Focus / multi-select for reading pane ---
 
 function clearFocus() {
-  readingVerses.forEach((item) => item.el.classList.remove('focused'));
+  focusedEl?.classList.remove('focused');
+  focusedEl = null;
   focusedIndex = -1;
 }
 
@@ -180,6 +186,7 @@ function setFocus(index) {
   if (index < 0 || index >= readingVerses.length) return;
   clearFocus();
   focusedIndex = index;
+  focusedEl = readingVerses[index].el;
   if (!directMode) {
     readingVerses[index].el.classList.add('focused');
   }
@@ -191,8 +198,8 @@ function setFocus(index) {
 }
 
 function clearMultiSelect() {
+  multiSelected.forEach((i) => readingVerses[i].el.classList.remove('multi-selected'));
   multiSelected.clear();
-  readingVerses.forEach((item) => item.el.classList.remove('multi-selected'));
   updateVerseNumberHighlights();
   updateCapacityDisplay();
 }
@@ -232,7 +239,7 @@ function displayCurrentSelection() {
   updateCapacityDisplay();
 
   // Track and mark live items
-  readingVerses.forEach((item) => item.el.classList.remove('live'));
+  liveIndices.forEach((i) => readingVerses[i].el.classList.remove('live'));
   liveIndices = new Set();
   if (multiSelected.size > 0) {
     multiSelected.forEach((i) => {
@@ -249,7 +256,7 @@ function displayCurrentSelection() {
 function clearLiveDisplay() {
   biblian.clearDisplay();
   clearMiniPreview();
-  readingVerses.forEach((item) => item.el.classList.remove('live'));
+  liveIndices.forEach((i) => readingVerses[i].el.classList.remove('live'));
   liveIndices = new Set();
   updateCapacityDisplay();
   updateVerseNumberHighlights();
@@ -329,13 +336,15 @@ function renderBookList() {
   const ul = document.createElement('ul');
   ul.className = 'book-list';
 
+  const frag = document.createDocumentFragment();
   bibleData.books.forEach((book, i) => {
     const li = document.createElement('li');
     li.textContent = book.name;
     if (i === selectedBookIndex) li.classList.add('active');
     li.addEventListener('click', () => selectBook(i));
-    ul.appendChild(li);
+    frag.appendChild(li);
   });
+  ul.appendChild(frag);
 
   content.appendChild(ul);
   navColumn.appendChild(content);
@@ -369,13 +378,15 @@ function selectBook(index) {
   const ul = document.createElement('ul');
   ul.className = 'chapter-list';
 
+  const chFrag = document.createDocumentFragment();
   book.chapters.forEach((ch) => {
     const li = document.createElement('li');
     li.textContent = 'Kapittul ' + ch.chapter;
     if (ch.chapter === prevChapter) li.classList.add('active');
     li.addEventListener('click', () => selectChapter(index, ch.chapter));
-    ul.appendChild(li);
+    chFrag.appendChild(li);
   });
+  ul.appendChild(chFrag);
 
   content.appendChild(ul);
   navColumn.appendChild(content);
@@ -391,6 +402,7 @@ function selectBook(index) {
   readingPane.innerHTML = '<div class="reading-placeholder">Vel kapittul</div>';
   readingVerses = [];
   focusedIndex = -1;
+  focusedEl = null;
   multiSelected.clear();
 }
 
@@ -416,6 +428,7 @@ function renderVersesNav(bookIndex, chapterNum, chapter) {
   const ul = document.createElement('ul');
   ul.className = 'verse-list';
 
+  const vFrag = document.createDocumentFragment();
   chapter.verses.forEach((v, i) => {
     const li = document.createElement('li');
     li.textContent = v.verse + '. ' + v.text.substring(0, 30) + (v.text.length > 30 ? '...' : '');
@@ -428,8 +441,9 @@ function renderVersesNav(bookIndex, chapterNum, chapter) {
         setFocus(i);
       }
     });
-    ul.appendChild(li);
+    vFrag.appendChild(li);
   });
+  ul.appendChild(vFrag);
 
   content.appendChild(ul);
   navColumn.appendChild(content);
@@ -453,9 +467,11 @@ function renderReadingPane(book, chapter, chapterNum) {
   readingPane.innerHTML = '';
   readingVerses = [];
   focusedIndex = -1;
+  focusedEl = null;
   multiSelected.clear();
   liveIndices = new Set();
 
+  const rpFrag = document.createDocumentFragment();
   chapter.verses.forEach((v) => {
     const span = document.createElement('span');
     span.className = 'reading-verse';
@@ -494,8 +510,9 @@ function renderReadingPane(book, chapter, chapterNum) {
     });
 
     readingVerses.push({ el: span, data: data });
-    readingPane.appendChild(span);
+    rpFrag.appendChild(span);
   });
+  readingPane.appendChild(rpFrag);
 
   updateCapacityDisplay();
 }
@@ -620,7 +637,7 @@ searchInput.addEventListener('input', () => {
       searchFocusedIndex = -1;
       return;
     }
-    searchTimeout = setTimeout(() => performVerseSearch(query), 80);
+    searchTimeout = setTimeout(() => performVerseSearch(query), 16);
   }
 });
 
@@ -661,6 +678,7 @@ function showVerseSearchResults(results, query) {
     return;
   }
 
+  const vsFrag = document.createDocumentFragment();
   results.forEach((item) => {
     const li = document.createElement('li');
     li.innerHTML =
@@ -677,8 +695,9 @@ function showVerseSearchResults(results, query) {
 
     li.addEventListener('click', () => navigateToVerseResult(data));
     searchItems.push({ el: li, data: data });
-    searchResultsList.appendChild(li);
+    vsFrag.appendChild(li);
   });
+  searchResultsList.appendChild(vsFrag);
 
   if (searchItems.length > 0) {
     setSearchFocus(0);
@@ -698,6 +717,7 @@ function showBookSearchResults(results, query) {
     return;
   }
 
+  const bsFrag = document.createDocumentFragment();
   results.forEach((item) => {
     const li = document.createElement('li');
     li.innerHTML =
@@ -706,8 +726,9 @@ function showBookSearchResults(results, query) {
 
     li.addEventListener('click', () => navigateToBookResult(item.index));
     searchItems.push({ el: li, data: item });
-    searchResultsList.appendChild(li);
+    bsFrag.appendChild(li);
   });
+  searchResultsList.appendChild(bsFrag);
 
   if (searchItems.length > 0) {
     setSearchFocus(0);
@@ -824,7 +845,7 @@ function toggleDirectMode() {
   chkDirect.checked = directMode;
   // Clear green preview highlight when entering direct mode
   if (directMode) {
-    readingVerses.forEach((item) => item.el.classList.remove('focused'));
+    focusedEl?.classList.remove('focused');
   } else if (focusedIndex >= 0) {
     readingVerses[focusedIndex].el.classList.add('focused');
   }
@@ -833,7 +854,7 @@ function toggleDirectMode() {
 chkDirect.addEventListener('change', () => {
   directMode = chkDirect.checked;
   if (directMode) {
-    readingVerses.forEach((item) => item.el.classList.remove('focused'));
+    focusedEl?.classList.remove('focused');
   } else if (focusedIndex >= 0) {
     readingVerses[focusedIndex].el.classList.add('focused');
   }
@@ -1211,6 +1232,42 @@ function saveColumnWidths() {
     previewColumnWidth: prevW,
   });
 }
+
+// --- Display window toggle ---
+
+function setDisplayButtonState(visible) {
+  if (visible) {
+    btnDisplay.textContent = 'Sløkk skíggja';
+    btnDisplay.className = 'header-btn btn-display-open';
+    btnDisplay.title = 'Sløkk skíggiglugga';
+  } else {
+    btnDisplay.textContent = 'Opna skíggja';
+    btnDisplay.className = 'header-btn btn-display-closed';
+    btnDisplay.title = 'Opna skíggiglugga';
+  }
+}
+
+btnDisplay.addEventListener('click', () => {
+  biblian.toggleDisplay();
+});
+
+biblian.onDisplayWindowState((visible) => {
+  setDisplayButtonState(visible);
+});
+
+// --- About dialog ---
+
+btnAbout.addEventListener('click', () => {
+  aboutOverlay.style.display = '';
+});
+
+aboutBackdrop.addEventListener('click', () => {
+  aboutOverlay.style.display = 'none';
+});
+
+document.getElementById('btn-about-close').addEventListener('click', () => {
+  aboutOverlay.style.display = 'none';
+});
 
 // --- Init ---
 
